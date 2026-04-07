@@ -2,9 +2,11 @@
 
 import { StatCard } from '@/components/ui/stat-card';
 import { JobCard } from '@/components/ui/job-card';
+import { SuggestedJobsSection } from '@/components/dashboard/suggested-jobs-section';
 import { Briefcase, Send, MessageSquare, TrendingUp, Plus, Kanban, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { Job } from '@/lib/actions/jobs';
+import type { SuggestedJob } from '@/lib/actions/suggestions';
 
 type Stats = {
   totalJobs: number;
@@ -17,9 +19,10 @@ type Props = {
   stats: Stats;
   topMatches: Job[];
   showOnboarding: boolean;
+  suggestedJobs: SuggestedJob[];
 };
 
-export function DashboardClient({ stats, topMatches, showOnboarding }: Props) {
+export function DashboardClient({ stats, topMatches, showOnboarding, suggestedJobs }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
@@ -43,6 +46,9 @@ export function DashboardClient({ stats, topMatches, showOnboarding }: Props) {
           </Link>
         </div>
       )}
+
+      {/* Suggested jobs (nightly discovery) */}
+      {suggestedJobs.length > 0 && <SuggestedJobsSection initialJobs={suggestedJobs} />}
 
       {/* Stats */}
       <section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -233,8 +233,40 @@ export default function ProfilePage() {
   const [minScore, setMinScore] = useState(3.8);
   const [dealBreakers, setDealBreakers] = useState<string[]>([]);
   const [dealBreakerInput, setDealBreakerInput] = useState("");
+  const [watchedCompanies, setWatchedCompanies] = useState<string[]>([]);
+  const [watchedInput, setWatchedInput] = useState("");
+  const [jobMarket, setJobMarket] = useState("in");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+
+  // Load existing profile data on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, preferences, onboarding_complete")
+        .eq("id", user.id)
+        .single();
+      if (!data) return;
+      const pref = (data.preferences ?? {}) as Record<string, unknown>;
+      if (data.full_name) setEditName(data.full_name);
+      if (pref.currentTitle) setEditTitle(pref.currentTitle as string);
+      if (pref.totalYearsExperience) setEditYears(String(pref.totalYearsExperience));
+      if (pref.targetRoles) setTargetRoles(pref.targetRoles as string[]);
+      if ((pref.salary as Record<string, unknown>)?.currency) setCurrency((pref.salary as Record<string, string>).currency as "INR" | "USD");
+      if ((pref.salary as Record<string, unknown>)?.min) setSalaryMin(String((pref.salary as Record<string, unknown>).min));
+      if ((pref.salary as Record<string, unknown>)?.max) setSalaryMax(String((pref.salary as Record<string, unknown>).max));
+      if (pref.locations) setLocations(pref.locations as string[]);
+      if (pref.minScore) setMinScore(pref.minScore as number);
+      if (pref.dealBreakers) setDealBreakers(pref.dealBreakers as string[]);
+      if (pref.watchedCompanies) setWatchedCompanies(pref.watchedCompanies as string[]);
+      if (pref.jobMarket) setJobMarket(pref.jobMarket as string);
+      // Skip straight to step 2 if they already uploaded a CV
+      if (data.onboarding_complete) setStep(3);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Drag & Drop ────────────────────────────────────────────────────────
 
@@ -306,6 +338,8 @@ export default function ProfilePage() {
             locations,
             minScore,
             dealBreakers,
+            watchedCompanies,
+            jobMarket,
           },
         })
         .eq("id", (await supabase.auth.getUser()).data.user?.id ?? "");
@@ -935,6 +969,40 @@ export default function ProfilePage() {
                   inputValue={dealBreakerInput}
                   onInputChange={setDealBreakerInput}
                 />
+              </div>
+
+              {/* Nightly discovery */}
+              <div style={{ borderTop: "1px solid var(--border-default)", paddingTop: "16px" }}>
+                <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "14px" }}>
+                  🌙 Nightly Job Discovery
+                </p>
+
+                <label style={labelStyle}>Job market (Adzuna region)</label>
+                <select
+                  value={jobMarket}
+                  onChange={(e) => setJobMarket(e.target.value)}
+                  style={{ ...fieldInputStyle, width: "auto", marginBottom: "14px", cursor: "pointer" }}
+                >
+                  <option value="in">🇮🇳 India</option>
+                  <option value="gb">🇬🇧 UK</option>
+                  <option value="us">🇺🇸 USA</option>
+                  <option value="au">🇦🇺 Australia</option>
+                  <option value="ca">🇨🇦 Canada</option>
+                  <option value="sg">🇸🇬 Singapore</option>
+                </select>
+
+                <label style={labelStyle}>Watch company portals (Greenhouse + Lever)</label>
+                <TagInput
+                  tags={watchedCompanies}
+                  onAdd={(t) => { if (!watchedCompanies.includes(t)) setWatchedCompanies([...watchedCompanies, t]); }}
+                  onRemove={(t) => setWatchedCompanies(watchedCompanies.filter((c) => c !== t))}
+                  placeholder="Stripe, Figma, Notion… press Enter"
+                  inputValue={watchedInput}
+                  onInputChange={setWatchedInput}
+                />
+                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "5px" }}>
+                  The cron job runs at 1 AM UTC and saves matching roles to your dashboard.
+                </p>
               </div>
 
               {saveError && (

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
   Search,
@@ -10,6 +12,7 @@ import {
   Kanban,
   BrainCircuit,
   Settings,
+  User,
 } from "lucide-react";
 
 const navGroups = [
@@ -37,6 +40,7 @@ const navGroups = [
 ];
 
 const bottomNav = [
+  { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -95,14 +99,38 @@ function NavItem({
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [userName, setUserName] = useState("—");
+  const [userEmail, setUserEmail] = useState("—");
 
-  const user = { name: "Your Name", email: "you@example.com" };
-  const initials = user.name
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      setUserEmail(user.email ?? "—");
+      // Try profile full_name first
+      supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          setUserName(
+            data?.full_name ||
+            user.user_metadata?.full_name ||
+            user.email?.split("@")[0] ||
+            "—"
+          );
+        });
+    });
+  }, []);
+
+  const initials = userName
     .split(" ")
     .map((n) => n[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase()
+    .replace("—", "?");
 
   return (
     <aside
@@ -144,7 +172,6 @@ export function Sidebar() {
             flexShrink: 0,
           }}
         >
-          {/* White checkmark SVG */}
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M2.5 7L5.5 10L11.5 4"
@@ -226,13 +253,18 @@ export function Sidebar() {
           />
         ))}
 
-        <div
+        {/* User chip */}
+        <Link
+          href="/profile"
           style={{
-            padding: "14px 16px",
+            padding: "12px 16px",
             display: "flex",
             alignItems: "center",
             gap: "10px",
+            textDecoration: "none",
+            borderTop: "1px solid var(--sidebar-border)",
           }}
+          title="Edit profile"
         >
           <div
             style={{
@@ -262,7 +294,7 @@ export function Sidebar() {
                 textOverflow: "ellipsis",
               }}
             >
-              {user.name}
+              {userName}
             </div>
             <div
               style={{
@@ -273,10 +305,10 @@ export function Sidebar() {
                 textOverflow: "ellipsis",
               }}
             >
-              {user.email}
+              {userEmail}
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   );
