@@ -13,7 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/pipeline": "Pipeline",
   "/prep": "Interview Prep",
   "/settings": "Settings",
-  "/profile": "Profile",
+  "/profile": "Profile & CV",
 };
 
 export default function DashboardLayout({

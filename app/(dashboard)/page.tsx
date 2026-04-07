@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
 import type { Job } from '@/lib/actions/jobs';
+import type { SuggestedJob } from '@/lib/actions/suggestions';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: allJobs }, { data: profile }] = await Promise.all([
+  const [{ data: allJobs }, { data: profile }, { data: suggestions }] = await Promise.all([
     supabase.from('jobs').select('*').eq('user_id', user!.id),
     supabase.from('profiles').select('onboarding_complete').eq('id', user!.id).single(),
+    supabase.from('suggested_jobs').select('*').eq('user_id', user!.id).eq('status', 'pending').order('rule_score', { ascending: false }).limit(10),
   ]);
 
   const jobs = (allJobs ?? []) as Job[];
@@ -31,6 +33,7 @@ export default async function DashboardPage() {
       stats={{ totalJobs, strongMatches, applied, avgScore }}
       topMatches={topMatches}
       showOnboarding={!profile?.onboarding_complete}
+      suggestedJobs={(suggestions ?? []) as SuggestedJob[]}
     />
   );
 }
