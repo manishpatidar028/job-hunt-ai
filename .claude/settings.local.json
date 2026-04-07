@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npm install:*)",
+      "Bash(cd:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(node -e \":*)",
+      "Bash(node -e:*)",
+      "Bash(find 'F:/Personal Projects/job-hunt-ai/node_modules/next/dist' -name *.md)"
+    ]
+  }
+}

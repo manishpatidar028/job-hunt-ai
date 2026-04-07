@@ -1,0 +1,84 @@
+import { generateText } from 'ai';
+import { geminiFlash } from '@/lib/ai/gemini';
+import type { Skill } from '@/lib/actions/skills';
+
+export type ScoreResult = {
+  overallScore: number;
+  breakdown: {
+    skillMatch: number;
+    seniorityFit: number;
+    domainOverlap: number;
+    remoteCompatibility: number;
+    growthPotential: number;
+  };
+  matchedSkills: string[];
+  gaps: string[];
+  recommendation: 'strong_apply' | 'apply' | 'consider' | 'skip';
+  reasoning: string;
+};
+
+const FALLBACK: ScoreResult = {
+  overallScore: 0,
+  breakdown: { skillMatch: 0, seniorityFit: 0, domainOverlap: 0, remoteCompatibility: 0, growthPotential: 0 },
+  matchedSkills: [],
+  gaps: [],
+  recommendation: 'consider',
+  reasoning: 'AI scoring unavailable — rule-based score only.',
+};
+
+export async function aiScore(
+  jdText: string,
+  cvText: string,
+  skills: Skill[]
+): Promise<ScoreResult> {
+  const skillSummary = skills
+    .filter((s) => !s.is_hidden)
+    .map((s) => `${s.name} (${s.level}, ${s.years_experience}yrs)`)
+    .join(', ');
+
+  const prompt = `CANDIDATE SKILLS: ${skillSummary}
+
+JOB DESCRIPTION:
+${jdText.slice(0, 4000)}
+
+CANDIDATE CV SUMMARY:
+${cvText.slice(0, 1000)}
+
+Return ONLY this JSON, nothing else:
+{
+  "overallScore": 3.5,
+  "breakdown": {
+    "skillMatch": 3.5,
+    "seniorityFit": 3.0,
+    "domainOverlap": 3.5,
+    "remoteCompatibility": 4.0,
+    "growthPotential": 3.0
+  },
+  "matchedSkills": ["TypeScript", "React"],
+  "gaps": ["Kubernetes", "Go"],
+  "recommendation": "apply",
+  "reasoning": "Strong frontend match. Missing some DevOps skills."
+}
+
+All scores 0-5 (1 decimal). recommendation must be one of: strong_apply, apply, consider, skip.`;
+
+  try {
+    const { text } = await generateText({
+      model: geminiFlash,
+      system:
+        'You are an expert technical recruiter evaluating job fit. Return ONLY valid JSON with no markdown fences, no explanation.',
+      prompt,
+    });
+    const clean = text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
+    const parsed = JSON.parse(clean) as ScoreResult;
+    // Clamp overallScore
+    parsed.overallScore = Math.min(5, Math.max(0, parsed.overallScore));
+    return parsed;
+  } catch (err) {
+    console.error('[ai-scorer] error:', err);
+    return FALLBACK;
+  }
+}
