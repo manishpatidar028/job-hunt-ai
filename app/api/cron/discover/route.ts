@@ -102,10 +102,11 @@ async function discoverForUser(
     fetches.push(fetchGreenhouseJobs(company));
     fetches.push(fetchLeverJobs(company));
   }
+  type RawJob = { title: string; company: string; location: string; jdText: string; jdUrl: string; source: string };
   const settled = await Promise.allSettled(fetches);
-  const raw = settled
+  const raw: RawJob[] = settled
     .filter((r) => r.status === 'fulfilled')
-    .flatMap((r) => (r as PromiseFulfilledResult<typeof raw>).value);
+    .flatMap((r) => (r as PromiseFulfilledResult<RawJob[]>).value);
 
   if (raw.length === 0) return { inserted: 0 };
 
