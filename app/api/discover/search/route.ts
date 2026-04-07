@@ -95,7 +95,7 @@ async function fetchGreenhouse(company: string, tokens: string[]): Promise<Disco
     const jobs = ((json.jobs ?? []) as Record<string, unknown>[]).map((j) => {
       const content = stripHtml(String((j.content as string) ?? ''));
       const loc = ((j.location as Record<string, unknown>)?.name as string) ?? '';
-      const remoteType = loc.toLowerCase().includes('remote') ? 'remote' : null;
+      const remoteType: 'remote' | null = loc.toLowerCase().includes('remote') ? 'remote' : null;
       return {
         externalId: `greenhouse-${j.id}`,
         title: String((j.title as string) ?? ''),
@@ -134,7 +134,7 @@ async function fetchLever(company: string, tokens: string[]): Promise<Discovered
       const additional = stripHtml(String((j.additional as string) ?? ''));
       const jdText = stripHtml(`${j.text}\n${lists}\n${additional}`);
       const locStr = String(((j.categories as Record<string, unknown>)?.location as string) ?? '');
-      const remoteType = locStr.toLowerCase().includes('remote') ? 'remote' : null;
+      const remoteType: 'remote' | null = locStr.toLowerCase().includes('remote') ? 'remote' : null;
       return {
         externalId: `lever-${j.id}`,
         title: String((j.text as string) ?? ''),
