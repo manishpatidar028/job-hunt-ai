@@ -33,6 +33,7 @@ export type Job = {
   score_breakdown: ScoreBreakdown | null;
   status: string;
   discovered_at: string;
+  updated_at: string | null;
   applied_at: string | null;
   prep_cache: Record<string, unknown> | null;
 };

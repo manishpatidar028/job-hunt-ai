@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { generateText } from 'ai';
-import { geminiFlash } from '@/lib/ai/gemini';
+import { geminiFlash } from '@/lib/ai/groq';
 import { ruleScore } from '@/lib/scoring/rule-scorer';
 import { aiScore } from '@/lib/scoring/ai-scorer';
 import { stripHtml } from '@/lib/utils/html';
@@ -45,13 +46,19 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const scoreSchema = z.object({
+    jdUrl:  z.string().url().max(2000).optional().or(z.literal('')),
+    jdText: z.string().max(50000).optional().default(''),
+  });
+
   let jdText = '';
   let jdUrl = '';
 
   try {
-    const body = await request.json();
-    jdUrl = body.jdUrl ?? '';
-    jdText = body.jdText ?? '';
+    const bodyParsed = scoreSchema.safeParse(await request.json().catch(() => ({})));
+    if (!bodyParsed.success) return NextResponse.json({ error: 'Invalid request', details: bodyParsed.error.flatten() }, { status: 400 });
+    jdUrl = bodyParsed.data.jdUrl ?? '';
+    jdText = bodyParsed.data.jdText ?? '';
 
     // Fetch URL if no JD text provided
     if (jdUrl && !jdText) {
@@ -94,7 +101,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('cv_text')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     const cvText = profile?.cv_text ?? '';
 
     // Run rule score + AI score + job info extraction in parallel
@@ -131,7 +138,7 @@ export async function POST(request: NextRequest) {
         status: 'new',
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (insertError) throw insertError;
     return NextResponse.json(job);

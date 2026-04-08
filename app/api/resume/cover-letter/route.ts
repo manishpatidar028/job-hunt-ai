@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateText } from 'ai';
-import { geminiFlash } from '@/lib/ai/gemini';
+import { geminiFlash } from '@/lib/ai/groq';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     .from('profiles')
     .select('cv_text, full_name')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   const cvText = profile?.cv_text?.trim();
   const candidateName = profile?.full_name ?? user.email?.split('@')[0] ?? 'Candidate';

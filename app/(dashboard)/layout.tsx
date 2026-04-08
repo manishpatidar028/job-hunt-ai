@@ -76,6 +76,8 @@ export default function DashboardLayout({
             flex: 1,
             overflowY: "auto",
             padding: "24px",
+            backgroundImage: "radial-gradient(circle, #CBD5E1 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
           }}
         >
           {children}

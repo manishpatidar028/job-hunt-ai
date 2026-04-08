@@ -11,8 +11,6 @@ import {
   Sparkles,
   Kanban,
   BrainCircuit,
-  Settings,
-  User,
 } from "lucide-react";
 
 const navGroups = [
@@ -39,10 +37,6 @@ const navGroups = [
   },
 ];
 
-const bottomNav = [
-  { href: "/profile", label: "Profile", icon: User },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
 
 function NavItem({
   href,
@@ -62,15 +56,16 @@ function NavItem({
         display: "flex",
         alignItems: "center",
         gap: "8px",
-        padding: "7px 10px",
+        padding: "7px 10px 7px 8px",
         margin: "1px 8px",
         borderRadius: "var(--radius-md)",
         fontSize: "12px",
-        fontWeight: active ? 500 : 400,
+        fontWeight: active ? 600 : 400,
         color: active ? "var(--nav-active-text)" : "var(--nav-inactive-text)",
         background: active ? "var(--nav-active-bg)" : "transparent",
         textDecoration: "none",
         transition: "all 0.12s ease",
+        borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent",
       }}
       onMouseEnter={(e) => {
         if (!active) {
@@ -126,11 +121,11 @@ export function Sidebar() {
 
   const initials = userName
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase()
-    .replace("—", "?");
+    .toUpperCase() || "?";
 
   return (
     <aside
@@ -138,7 +133,7 @@ export function Sidebar() {
         width: "var(--sidebar-width)",
         minWidth: "var(--sidebar-width)",
         height: "100vh",
-        background: "var(--sidebar-bg)",
+        background: "#FFFFFF",
         borderRight: "1px solid var(--sidebar-border)",
         display: "flex",
         flexDirection: "column",
@@ -152,7 +147,8 @@ export function Sidebar() {
       {/* Logo */}
       <div
         style={{
-          padding: "18px 16px",
+          height: "var(--topbar-height)",
+          padding: "0 16px",
           borderBottom: "1px solid var(--sidebar-border)",
           display: "flex",
           alignItems: "center",
@@ -164,7 +160,7 @@ export function Sidebar() {
           style={{
             width: "28px",
             height: "28px",
-            background: "#10B981",
+            background: "var(--accent-gradient)",
             borderRadius: "8px",
             display: "flex",
             alignItems: "center",
@@ -210,8 +206,8 @@ export function Sidebar() {
             <div
               style={{
                 fontSize: "9px",
-                fontWeight: 600,
-                color: "var(--text-placeholder)",
+                fontWeight: 700,
+                color: "var(--text-muted)",
                 padding: "14px 16px 5px",
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
@@ -243,16 +239,6 @@ export function Sidebar() {
           borderTop: "1px solid var(--sidebar-border)",
         }}
       >
-        {bottomNav.map((item) => (
-          <NavItem
-            key={item.href}
-            href={item.href}
-            label={item.label}
-            icon={item.icon}
-            active={pathname.startsWith(item.href)}
-          />
-        ))}
-
         {/* User chip */}
         <Link
           href="/profile"
@@ -271,7 +257,7 @@ export function Sidebar() {
               width: "28px",
               height: "28px",
               borderRadius: "50%",
-              background: "#10B981",
+              background: "var(--accent-gradient)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateText } from "ai";
-import { geminiFlash } from "@/lib/ai/gemini";
+import { geminiFlash } from '@/lib/ai/groq';
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,6 +51,9 @@ export async function POST(request: NextRequest) {
     const rawText = formData.get("cvText") as string | null;
 
     if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 413 });
+      }
       // Parse PDF
       const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -103,21 +107,23 @@ export async function POST(request: NextRequest) {
       .update({ cv_text: cvText, cv_url: cvUrl })
       .eq("id", user.id);
 
-    // Call Gemini for extraction
-    let extracted: {
-      fullName: string;
-      currentTitle: string;
-      totalYearsExperience: number;
-      skills: {
-        name: string;
-        yearsExperience: number;
-        level: "expert" | "strong" | "familiar" | "learning";
-        isPrimary: boolean;
-        category: string;
-      }[];
-      domains: string[];
-      summary: string;
-    };
+    const cvSchema = z.object({
+      fullName:              z.string().default(''),
+      currentTitle:          z.string().default(''),
+      totalYearsExperience:  z.number().min(0).max(60).default(0),
+      skills: z.array(z.object({
+        name:             z.string(),
+        yearsExperience:  z.number().min(0).max(60).default(0),
+        level:            z.enum(['expert', 'strong', 'familiar', 'learning']).default('familiar'),
+        isPrimary:        z.boolean().default(false),
+        category:         z.string().default('tools'),
+      })).default([]),
+      domains: z.array(z.string()).default([]),
+      summary: z.string().default(''),
+    });
+
+    type CvExtracted = z.infer<typeof cvSchema>;
+    let extracted: CvExtracted;
 
     try {
       const { text } = await generateText({
@@ -132,19 +138,17 @@ export async function POST(request: NextRequest) {
         .replace(/\s*```\s*$/i, "")
         .trim();
 
-      extracted = JSON.parse(clean);
+      extracted = cvSchema.parse(JSON.parse(clean));
     } catch (aiErr) {
-      console.error("[cv/upload] Gemini error:", aiErr);
+      console.error("[cv/upload] extraction error:", aiErr);
       return NextResponse.json(
-        { error: "AI extraction failed" },
+        { error: "AI extraction failed — please try again or paste your CV as text." },
         { status: 500 }
       );
     }
 
-    // Validate skills array
-    const skills = (extracted.skills ?? []).filter(
-      (s) => s.name && typeof s.name === "string"
-    );
+    // Schema guarantees skills is an array with valid shapes; filter blank names
+    const skills = extracted.skills.filter((s) => s.name.trim().length > 0);
 
     // Delete existing cv_extracted skills and reinsert (handles re-upload)
     await supabase

@@ -1,29 +1,32 @@
 import { generateText } from 'ai';
-import { geminiFlash } from '@/lib/ai/gemini';
+import { z } from 'zod';
+import { geminiFlash } from '@/lib/ai/groq';
 import type { Skill } from '@/lib/actions/skills';
 
-export type ScoreResult = {
-  overallScore: number;
-  breakdown: {
-    skillMatch: number;
-    seniorityFit: number;
-    domainOverlap: number;
-    remoteCompatibility: number;
-    growthPotential: number;
-  };
-  matchedSkills: string[];
-  gaps: string[];
-  recommendation: 'strong_apply' | 'apply' | 'consider' | 'skip';
-  reasoning: string;
-};
+const scoreSchema = z.object({
+  overallScore: z.number().min(0).max(5),
+  breakdown: z.object({
+    skillMatch:           z.number().min(0).max(5),
+    seniorityFit:         z.number().min(0).max(5),
+    domainOverlap:        z.number().min(0).max(5),
+    remoteCompatibility:  z.number().min(0).max(5),
+    growthPotential:      z.number().min(0).max(5),
+  }),
+  matchedSkills: z.array(z.string()).default([]),
+  gaps:          z.array(z.string()).default([]),
+  recommendation: z.enum(['strong_apply', 'apply', 'consider', 'skip']),
+  reasoning: z.string(),
+});
+
+export type ScoreResult = z.infer<typeof scoreSchema>;
 
 const FALLBACK: ScoreResult = {
-  overallScore: 0,
-  breakdown: { skillMatch: 0, seniorityFit: 0, domainOverlap: 0, remoteCompatibility: 0, growthPotential: 0 },
+  overallScore: 2.5,
+  breakdown: { skillMatch: 2.5, seniorityFit: 2.5, domainOverlap: 2.5, remoteCompatibility: 2.5, growthPotential: 2.5 },
   matchedSkills: [],
   gaps: [],
   recommendation: 'consider',
-  reasoning: 'AI scoring unavailable — rule-based score only.',
+  reasoning: 'AI scoring temporarily unavailable. This is a neutral placeholder score — evaluate manually.',
 };
 
 export async function aiScore(
@@ -73,9 +76,7 @@ All scores 0-5 (1 decimal). recommendation must be one of: strong_apply, apply, 
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```\s*$/i, '')
       .trim();
-    const parsed = JSON.parse(clean) as ScoreResult;
-    // Clamp overallScore
-    parsed.overallScore = Math.min(5, Math.max(0, parsed.overallScore));
+    const parsed = scoreSchema.parse(JSON.parse(clean));
     return parsed;
   } catch (err) {
     console.error('[ai-scorer] error:', err);

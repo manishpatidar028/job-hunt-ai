@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MapPin, Wifi, Clock, ArrowRight } from "lucide-react";
 
 interface JobCardProps {
@@ -13,6 +14,7 @@ interface JobCardProps {
   salaryRange?: { min?: number; max?: number };
   currency?: string;
   discoveredAt?: string;
+  href?: string;
 }
 
 // 6 bg/text pairs for company logos
@@ -81,7 +83,9 @@ export function JobCard({
   salaryRange,
   currency = "INR",
   discoveredAt,
+  href = "/jobs",
 }: JobCardProps) {
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
 
   const [logoBg, logoText] = companyPalette(company);
@@ -105,6 +109,7 @@ export function JobCard({
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => router.push(href)}
     >
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>

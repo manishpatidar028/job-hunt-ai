@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { type LucideIcon } from "lucide-react";
 
 interface StatCardProps {
@@ -10,14 +11,46 @@ interface StatCardProps {
   icon: LucideIcon;
 }
 
+function useCountUp(target: number, duration = 900) {
+  const [display, setDisplay] = useState(0);
+  const raf = useRef<number>(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(eased * target);
+      if (progress < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf.current);
+  }, [target, duration]);
+
+  return display;
+}
+
 export function StatCard({ label, value, delta, deltaType, icon: Icon }: StatCardProps) {
+  const isNumeric = typeof value === "number" || (typeof value === "string" && value !== "—" && !isNaN(parseFloat(value)));
+  const targetNum = isNumeric ? parseFloat(String(value)) : 0;
+  const isFloat = String(value).includes(".");
+
+  const animated = useCountUp(isNumeric ? targetNum : 0);
+
+  const displayValue = !isNumeric
+    ? value
+    : isFloat
+    ? animated.toFixed(1)
+    : Math.round(animated);
+
   return (
     <div
       style={{
         background: "var(--bg-card)",
         border: "1px solid var(--border-default)",
         borderRadius: "var(--radius-lg)",
-        padding: "16px",
+        padding: "14px 16px",
         boxShadow: "var(--shadow-card)",
         transition: "box-shadow 0.18s ease",
         cursor: "default",
@@ -60,15 +93,16 @@ export function StatCard({ label, value, delta, deltaType, icon: Icon }: StatCar
       {/* Value */}
       <div
         style={{
-          fontSize: "26px",
+          fontSize: "24px",
           fontWeight: 700,
           color: "var(--text-primary)",
           letterSpacing: "-0.5px",
-          marginTop: "10px",
+          marginTop: "8px",
           lineHeight: 1,
+          fontVariantNumeric: "tabular-nums",
         }}
       >
-        {value}
+        {displayValue}
       </div>
 
       {/* Delta */}

@@ -208,6 +208,8 @@ export default function ProfilePage() {
 
   // Step
   const [step, setStep] = useState(1);
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // Step 1
   const [uploadMethod, setUploadMethod] = useState<"pdf" | "text">("pdf");
@@ -262,8 +264,9 @@ export default function ProfilePage() {
       if (pref.dealBreakers) setDealBreakers(pref.dealBreakers as string[]);
       if (pref.watchedCompanies) setWatchedCompanies(pref.watchedCompanies as string[]);
       if (pref.jobMarket) setJobMarket(pref.jobMarket as string);
-      // Skip straight to step 2 if they already uploaded a CV
-      if (data.onboarding_complete) setStep(3);
+      // Show welcome-back choice screen if they've already set up their profile
+      if (data.onboarding_complete) setShowWelcomeBack(true);
+      setProfileLoading(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -356,6 +359,37 @@ export default function ProfilePage() {
 
   // ── Render ─────────────────────────────────────────────────────────────
 
+  if (profileLoading) return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 48px" }}>
+      <div style={{ width: "100%", maxWidth: "560px" }}>
+        {/* Progress bar skeleton */}
+        <div style={{ marginBottom: "28px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+            <div style={{ width: "140px", height: "12px", borderRadius: "var(--radius-sm)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "32px", height: "12px", borderRadius: "var(--radius-sm)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+          </div>
+          <div style={{ height: "4px", borderRadius: "99px", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+        </div>
+        {/* Card skeleton */}
+        <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)", borderRadius: "var(--radius-xl)", padding: "36px 28px", boxShadow: "var(--shadow-card)", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ width: "160px", height: "20px", borderRadius: "var(--radius-sm)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+          <div style={{ width: "100%", height: "14px", borderRadius: "var(--radius-sm)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+          <div style={{ width: "80%", height: "14px", borderRadius: "var(--radius-sm)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px" }}>
+            <div style={{ width: "100%", height: "52px", borderRadius: "var(--radius-lg)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "100%", height: "52px", borderRadius: "var(--radius-lg)", background: "var(--bg-muted)", animation: "pulse 1.5s ease-in-out infinite" }} />
+          </div>
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+
   return (
     <div
       style={{
@@ -367,6 +401,91 @@ export default function ProfilePage() {
       <div style={{ width: "100%", maxWidth: "560px" }}>
         <ProgressBar step={step} />
 
+        {/* ── WELCOME BACK ── */}
+        {showWelcomeBack && (
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-default)",
+              borderRadius: "var(--radius-xl)",
+              padding: "36px 28px",
+              boxShadow: "var(--shadow-card)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px",
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Welcome back 👋
+              </h2>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                Your profile is already set up. What would you like to do?
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {/* Option 1 — Edit preferences */}
+              <button
+                onClick={() => { setShowWelcomeBack(false); setStep(3); }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "14px",
+                  padding: "16px",
+                  border: "1px solid var(--accent-border)",
+                  borderRadius: "var(--radius-lg)",
+                  background: "var(--accent-subtle)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent-subtle)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-border)"; }}
+              >
+                <div style={{ fontSize: "22px", lineHeight: 1 }}>⚙️</div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+                    Update my preferences
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Edit target roles, salary, locations and job filters.
+                  </div>
+                </div>
+              </button>
+
+              {/* Option 2 — Re-upload CV */}
+              <button
+                onClick={() => { setShowWelcomeBack(false); setStep(1); }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "14px",
+                  padding: "16px",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: "var(--radius-lg)",
+                  background: "var(--bg-subtle)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-default)"; }}
+              >
+                <div style={{ fontSize: "22px", lineHeight: 1 }}>📄</div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+                    Start from scratch
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                    Re-upload your CV and let AI re-extract everything fresh.
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div
           style={{
             background: "var(--bg-card)",
@@ -374,6 +493,7 @@ export default function ProfilePage() {
             borderRadius: "var(--radius-xl)",
             padding: "28px",
             boxShadow: "var(--shadow-card)",
+            display: showWelcomeBack ? "none" : undefined,
           }}
         >
           {/* ── STEP 1 ── */}

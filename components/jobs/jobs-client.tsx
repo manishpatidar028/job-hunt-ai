@@ -82,15 +82,26 @@ export function JobsClient({ initialJobs }: Props) {
   }
 
   async function handleStatusChange(id: string, status: string) {
+    const prevStatus = jobs.find((j) => j.id === id)?.status;
     setJobs((prev) => prev.map((j) => j.id === id ? { ...j, status } : j));
     if (selectedJob?.id === id) setSelectedJob((prev) => prev ? { ...prev, status } : prev);
-    await updateJobStatus(id, status);
+    try {
+      await updateJobStatus(id, status);
+    } catch {
+      setJobs((prev) => prev.map((j) => j.id === id ? { ...j, status: prevStatus ?? j.status } : j));
+      if (selectedJob?.id === id) setSelectedJob((prev) => prev ? { ...prev, status: prevStatus ?? prev.status } : prev);
+    }
   }
 
   async function handleDelete(id: string) {
+    const prevJobs = jobs;
     setJobs((prev) => prev.filter((j) => j.id !== id));
     setSheetOpen(false);
-    await deleteJob(id);
+    try {
+      await deleteJob(id);
+    } catch {
+      setJobs(prevJobs);
+    }
   }
 
   function handleViewDetails(job: Job) {

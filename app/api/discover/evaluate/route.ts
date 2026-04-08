@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { ruleScore } from '@/lib/scoring/rule-scorer';
 import { aiScore } from '@/lib/scoring/ai-scorer';
@@ -55,7 +56,7 @@ async function evaluateOne(
         status: 'new',
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) return { status: 'error', externalId: discovered.externalId, error: error.message };
     return { status: 'ok', externalId: discovered.externalId, job: job as Record<string, unknown> };
@@ -69,11 +70,29 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const jobs: DiscoveredJob[] = body.jobs ?? [];
+  const evaluateSchema = z.object({
+    jobs: z.array(z.object({
+      externalId: z.string().max(200),
+      title:      z.string().max(300).optional().default(''),
+      company:    z.string().max(200).optional().default(''),
+      location:   z.string().max(200).optional().default(''),
+      remoteType: z.enum(['remote', 'hybrid', 'onsite']).nullable().optional(),
+      jdText:     z.string().max(50000),
+      jdUrl:      z.string().max(2000).optional().default(''),
+      source:     z.string().max(50),
+      salaryMin:  z.number().nullable().optional(),
+      salaryMax:  z.number().nullable().optional(),
+      ruleScore:       z.number().optional().default(0),
+      matchedSkills:   z.array(z.any()).optional().default([]),
+      missingPrimary:  z.array(z.string()).optional().default([]),
+    })).max(15),
+  });
+
+  const parsed = evaluateSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
+  const jobs = parsed.data.jobs as DiscoveredJob[];
 
   if (jobs.length === 0) return NextResponse.json({ results: [] });
-  if (jobs.length > 15) return NextResponse.json({ error: 'Max 15 jobs per batch' }, { status: 400 });
 
   // Check daily rate limit
   const dayStart = new Date();
@@ -93,7 +112,7 @@ export async function POST(request: NextRequest) {
   const { data: skillsData } = await supabase.from('skills').select('*').eq('user_id', user.id);
   const skills = (skillsData ?? []) as Skill[];
 
-  const { data: profile } = await supabase.from('profiles').select('cv_text').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('cv_text').eq('id', user.id).maybeSingle();
   const cvText = profile?.cv_text ?? '';
 
   // Evaluate all in parallel — sub-agent pattern

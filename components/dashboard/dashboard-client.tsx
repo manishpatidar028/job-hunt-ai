@@ -3,7 +3,7 @@
 import { StatCard } from '@/components/ui/stat-card';
 import { JobCard } from '@/components/ui/job-card';
 import { SuggestedJobsSection } from '@/components/dashboard/suggested-jobs-section';
-import { Briefcase, Send, MessageSquare, TrendingUp, Plus, Kanban, AlertCircle } from 'lucide-react';
+import { Briefcase, Send, MessageSquare, TrendingUp, Plus, Kanban, AlertCircle, Telescope, BrainCircuit } from 'lucide-react';
 import Link from 'next/link';
 import type { Job } from '@/lib/actions/jobs';
 import type { SuggestedJob } from '@/lib/actions/suggestions';
@@ -68,7 +68,7 @@ export function DashboardClient({ stats, topMatches, showOnboarding, suggestedJo
         <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>
           Quick Actions
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <QuickActionCard
             href="/jobs"
             iconBg="var(--accent-subtle)"
@@ -83,14 +83,28 @@ export function DashboardClient({ stats, topMatches, showOnboarding, suggestedJo
             title="View pipeline"
             subtitle="Track application status"
           />
+          <QuickActionCard
+            href="/discover"
+            iconBg="#FDF4FF"
+            icon={<Telescope size={18} color="#A855F7" />}
+            title="Discover jobs"
+            subtitle="Scan Greenhouse, Lever & more"
+          />
+          <QuickActionCard
+            href="/prep"
+            iconBg="#FFF7ED"
+            icon={<BrainCircuit size={18} color="#F97316" />}
+            title="Interview prep"
+            subtitle="Practice with AI feedback"
+          />
         </div>
       </section>
 
-      {/* Top matches */}
+      {/* Recently accessed */}
       {topMatches.length > 0 && (
         <section>
           <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>
-            Top Matches
+            Recently Accessed
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {topMatches.map((job) => (

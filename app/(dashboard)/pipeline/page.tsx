@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getJobs } from '@/lib/actions/jobs';
 import { KanbanBoard } from '@/components/pipeline/kanban-board';
 

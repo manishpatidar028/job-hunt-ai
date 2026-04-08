@@ -28,6 +28,7 @@
   /* Accent — Emerald */
   --accent: #10B981;
   --accent-hover: #059669;
+  --accent-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
   --accent-subtle: #F0FDF4;
   --accent-border: #BBF7D0;
 
@@ -53,7 +54,7 @@
   /* Sidebar */
   --sidebar-width: 220px;
   --sidebar-bg: #FFFFFF;
-  --sidebar-border: #F1F5F9;
+  --sidebar-border: #E2E8F0;
   --nav-active-bg: #F0FDF4;
   --nav-active-text: #0F172A;
   --nav-active-icon: #10B981;
@@ -62,8 +63,8 @@
 
   /* Topbar */
   --topbar-height: 56px;
-  --topbar-bg: #FFFFFF;
-  --topbar-border: #F1F5F9;
+  --topbar-bg: rgba(255, 255, 255, 0.75);
+  --topbar-border: rgba(241, 245, 249, 0.8);
 
   /* Shadows */
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.03);
@@ -105,6 +106,22 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100%;
+}
+
+/* Page-level headings */
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
 }
 
 /* Scrollbar */

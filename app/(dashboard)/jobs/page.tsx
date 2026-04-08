@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getJobs } from '@/lib/actions/jobs';
 import { JobsClient } from '@/components/jobs/jobs-client';
 

@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { Job } from '@/lib/actions/jobs';
 import { PrepClient } from '@/components/prep/prep-client';
@@ -5,11 +8,12 @@ import { PrepClient } from '@/components/prep/prep-client';
 export default async function PrepPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data } = await supabase
     .from('jobs')
     .select('*')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .in('status', ['interview', 'applied'])
     .order('ai_score', { ascending: false, nullsFirst: false });
 

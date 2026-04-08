@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getSkills } from '@/lib/actions/skills';
 import { SkillsClient } from '@/components/skills/skills-client';
 

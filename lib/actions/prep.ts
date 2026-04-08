@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { generateText } from 'ai';
-import { geminiFlash } from '@/lib/ai/gemini';
+import { geminiFlash } from '@/lib/ai/groq';
 
 async function authed() {
   const supabase = await createClient();

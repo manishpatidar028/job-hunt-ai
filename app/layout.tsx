@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ConsoleEasterEgg from "@/components/console-easter-egg";
 
 export const metadata: Metadata = {
   title: "JobHunt AI",
@@ -21,7 +22,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="h-full antialiased">{children}</body>
+      <body className="h-full antialiased">
+        <ConsoleEasterEgg />
+        {children}
+      </body>
     </html>
   );
 }
