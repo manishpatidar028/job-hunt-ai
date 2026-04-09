@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { checkAndRecordUsage } from '@/lib/usage/check-limit';
 import { generateText } from 'ai';
 import { geminiFlash } from '@/lib/ai/groq';
 import { ruleScore } from '@/lib/scoring/rule-scorer';
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const limit = await checkAndRecordUsage(user.id, 'job_score');
+  if (!limit.allowed) return NextResponse.json({ error: `Daily limit reached (${limit.limit}/day). Resets at midnight.`, retryAfter: limit.retryAfter }, { status: 429 });
 
   const scoreSchema = z.object({
     jdUrl:  z.string().url().max(2000).optional().or(z.literal('')),

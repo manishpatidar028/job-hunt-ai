@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { generateText } from 'ai';
 import { geminiFlash } from '@/lib/ai/groq';
+import { checkAndRecordUsage } from '@/lib/usage/check-limit';
 
 async function authed() {
   const supabase = await createClient();
@@ -47,10 +48,13 @@ export async function generateInterviewQuestions(
   jobId: string,
   forceRegenerate = false
 ): Promise<InterviewQuestion[]> {
-  const { supabase, job } = await getJobWithCache(jobId);
+  const { supabase, userId, job } = await getJobWithCache(jobId);
   const cache = (job.prep_cache ?? {}) as Record<string, unknown>;
 
   if (!forceRegenerate && cache.questions) return cache.questions as InterviewQuestion[];
+
+  const limit = await checkAndRecordUsage(userId, 'interview_prep');
+  if (!limit.allowed) throw new Error(`Daily limit reached (${limit.limit}/day). Resets at midnight.`);
 
   const text = await callGroq(
     'You are an expert interview coach. Return ONLY valid JSON, no markdown.',

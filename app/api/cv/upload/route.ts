@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { checkAndRecordUsage } from "@/lib/usage/check-limit";
 import { generateText } from "ai";
 import { geminiFlash } from '@/lib/ai/groq';
 
@@ -41,6 +42,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limit = await checkAndRecordUsage(user.id, 'cv_upload');
+  if (!limit.allowed) return NextResponse.json({ error: `Daily limit reached (${limit.limit}/day). Resets at midnight.`, retryAfter: limit.retryAfter }, { status: 429 });
 
   let cvText = "";
   let cvUrl = "";
