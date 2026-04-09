@@ -203,10 +203,10 @@ export default function LoginPage() {
               marginBottom: "4px",
             }}
           >
-            Welcome back
+            {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-            Sign in to your job search dashboard
+            {mode === "signin" ? "Sign in to your job search dashboard" : "Start your smarter job search"}
           </p>
         </div>
 

@@ -12,6 +12,7 @@ type Props = {
   hasAdzuna: boolean;
   watchedCompanies: string[];
   jobMarket: string;
+  userYearsExperience: number;
 };
 
 const TIMEFRAMES = [
@@ -37,13 +38,16 @@ const LEVEL_COLORS: Record<string, { bg: string; text: string }> = {
   learning: { bg: '#F8FAFC', text: '#64748B' },
 };
 
-export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobMarket }: Props) {
+export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobMarket, userYearsExperience }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [location, setLocation] = useState('');
+  const [locations, setLocations] = useState<string[]>([]);
+  const [locationInput, setLocationInput] = useState('');
   const [country, setCountry] = useState(jobMarket);
   const [daysBack, setDaysBack] = useState<number | null>(null);
   const [companiesText, setCompaniesText] = useState(watchedCompanies.join(', '));
   const [showCompanies, setShowCompanies] = useState(false);
+  const [minYears, setMinYears] = useState<string>(userYearsExperience > 0 ? String(userYearsExperience) : '');
+  const [maxYears, setMaxYears] = useState<string>('');
 
   const [jobs, setJobs] = useState<DiscoveredJob[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -53,6 +57,16 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
   const [evalResults, setEvalResults] = useState<EvaluateResult[]>([]);
   const [evalError, setEvalError] = useState('');
   const [panelJob, setPanelJob] = useState<DiscoveredJob | null>(null);
+
+  const addLocation = (val: string) => {
+    const trimmed = val.trim();
+    if (trimmed && !locations.includes(trimmed)) {
+      setLocations((prev) => [...prev, trimmed]);
+    }
+    setLocationInput('');
+  };
+
+  const removeLocation = (loc: string) => setLocations((prev) => prev.filter((l) => l !== loc));
 
   const handleSearch = useCallback(async () => {
     setSearchError('');
@@ -65,7 +79,12 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
       const res = await fetch('/api/discover/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, location, country, companies, ...(daysBack ? { daysBack } : {}) }),
+        body: JSON.stringify({
+          query, locations, country, companies,
+          ...(daysBack ? { daysBack } : {}),
+          ...(minYears ? { minYears: parseInt(minYears) } : {}),
+          ...(maxYears ? { maxYears: parseInt(maxYears) } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setSearchError(data.error ?? 'Search failed'); return; }
@@ -77,7 +96,7 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
     } finally {
       setSearching(false);
     }
-  }, [query, location, country, companiesText, daysBack]);
+  }, [query, locations, country, companiesText, daysBack, minYears, maxYears]);
 
   const toggleJob = (id: string) => {
     setSelected((prev) => {
@@ -150,10 +169,31 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 130px' }}>
-              <span style={labelStyle}>Location</span>
-              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Bangalore / Remote" style={inputStyle} />
-            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 200px' }}>
+              <span style={labelStyle}>Locations</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: '#fff', minHeight: '38px', alignItems: 'center' }}>
+                {locations.map((loc) => (
+                  <span key={loc} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '100px', background: 'var(--accent-subtle)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--accent-border)' }}>
+                    {loc}
+                    <button onClick={() => removeLocation(loc)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--accent)', lineHeight: 1 }}>
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addLocation(locationInput); }
+                    if (e.key === 'Backspace' && !locationInput && locations.length > 0) removeLocation(locations[locations.length - 1]);
+                  }}
+                  onBlur={() => { if (locationInput.trim()) addLocation(locationInput); }}
+                  placeholder={locations.length === 0 ? 'Ahmedabad, Bangalore, Remote…' : 'Add more…'}
+                  style={{ border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', background: 'transparent', minWidth: '120px', flex: 1, padding: 0 }}
+                />
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Press Enter or comma to add · Leave empty for all locations</span>
+            </div>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               <span style={labelStyle}>Market</span>
               <select value={country} onChange={(e) => setCountry(e.target.value)} style={{ ...inputStyle, width: 'auto', cursor: 'pointer' }}>
@@ -181,6 +221,29 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Experience year range */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <span style={labelStyle}>My experience (yrs)</span>
+              <input
+                type="number" min={0} max={30} placeholder="e.g. 4"
+                value={minYears} onChange={(e) => setMinYears(e.target.value)}
+                style={{ ...inputStyle, width: '100px' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <span style={labelStyle}>Max required (yrs)</span>
+              <input
+                type="number" min={0} max={30} placeholder="e.g. 8"
+                value={maxYears} onChange={(e) => setMaxYears(e.target.value)}
+                style={{ ...inputStyle, width: '100px' }}
+              />
+            </label>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 8px', lineHeight: 1.5 }}>
+              Jobs requiring more experience than yours will be filtered out
+            </p>
           </div>
 
           <div>
@@ -366,6 +429,11 @@ function DiscoverJobRow({ job, checked, active, onToggle, onOpen }: {
             <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '100px', background: '#F8FAFC', color: 'var(--text-muted)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '3px' }}>
               <Building2 size={9} /> {sourceLabels[job.source] ?? job.source}
             </span>
+            {job.requiredYears && (
+              <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '100px', background: '#FDF4FF', color: '#A855F7', fontWeight: 500 }}>
+                {job.requiredYears.max ? `${job.requiredYears.min}–${job.requiredYears.max} yrs` : `${job.requiredYears.min}+ yrs`}
+              </span>
+            )}
           </div>
           {cleanJd && (
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

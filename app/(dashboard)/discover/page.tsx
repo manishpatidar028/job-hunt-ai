@@ -22,6 +22,7 @@ export default async function DiscoverPage() {
   const prefs = (profile?.preferences ?? {}) as Record<string, unknown>;
   const watchedCompanies = (prefs.watchedCompanies as string[]) ?? [];
   const jobMarket = (prefs.jobMarket as string) ?? 'in';
+  const userYearsExperience = (prefs.totalYearsExperience as number) ?? 0;
 
   return (
     <div>
@@ -38,6 +39,7 @@ export default async function DiscoverPage() {
         hasAdzuna={hasAdzuna}
         watchedCompanies={watchedCompanies}
         jobMarket={jobMarket}
+        userYearsExperience={userYearsExperience}
       />
     </div>
   );
