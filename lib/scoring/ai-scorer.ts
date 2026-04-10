@@ -21,12 +21,12 @@ const scoreSchema = z.object({
 export type ScoreResult = z.infer<typeof scoreSchema>;
 
 const FALLBACK: ScoreResult = {
-  overallScore: 2.5,
-  breakdown: { skillMatch: 2.5, seniorityFit: 2.5, domainOverlap: 2.5, remoteCompatibility: 2.5, growthPotential: 2.5 },
+  overallScore: 0,
+  breakdown: { skillMatch: 0, seniorityFit: 0, domainOverlap: 0, remoteCompatibility: 0, growthPotential: 0 },
   matchedSkills: [],
   gaps: [],
   recommendation: 'consider',
-  reasoning: 'AI scoring temporarily unavailable. This is a neutral placeholder score — evaluate manually.',
+  reasoning: 'AI scoring temporarily unavailable — evaluate manually.',
 };
 
 export async function aiScore(

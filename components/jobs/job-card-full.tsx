@@ -16,12 +16,47 @@ function companyPalette(name: string): [string, string] {
 }
 
 const BREAKDOWN_DIMS = [
-  { key: 'skillMatch',          label: 'Skill Match',   color: '#10B981' },
-  { key: 'seniorityFit',        label: 'Seniority',     color: '#6366F1' },
-  { key: 'domainOverlap',       label: 'Domain',        color: '#F59E0B' },
-  { key: 'remoteCompatibility', label: 'Remote Fit',    color: '#0EA5E9' },
-  { key: 'growthPotential',     label: 'Growth',        color: '#A855F7' },
+  { key: 'skillMatch',          label: 'Skills'    },
+  { key: 'seniorityFit',        label: 'Seniority' },
+  { key: 'domainOverlap',       label: 'Domain'    },
+  { key: 'remoteCompatibility', label: 'Remote'    },
+  { key: 'growthPotential',     label: 'Growth'    },
 ];
+
+function ringColor(val: number) {
+  if (val >= 4)   return '#10B981';
+  if (val >= 2.5) return '#F59E0B';
+  if (val > 0)    return '#EF4444';
+  return '#CBD5E1';
+}
+
+function MiniRing({ val, label }: { val: number; label: string }) {
+  const r = 14, sw = 3, size = 36, cx = 18, cy = 18;
+  const circ = 2 * Math.PI * r;
+  const color = ringColor(val);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border-strong)" strokeWidth={sw} />
+        <circle
+          cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={sw}
+          strokeDasharray={`${circ} ${circ}`}
+          strokeDashoffset={circ * (1 - val / 5)}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${cx} ${cy})`}
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+          fontSize="8.5" fontWeight="700" fill={color} fontFamily="var(--font)">
+          {val > 0 ? val.toFixed(1) : '—'}
+        </text>
+      </svg>
+      <span style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>
+        {label}
+      </span>
+    </div>
+  );
+}
 
 const REC_STYLES: Record<string, { bg: string; color: string; border: string; label: string }> = {
   strong_apply: { bg: '#F0FDF4', color: '#065F46', border: '#BBF7D0', label: '⚡ Strong Apply' },
@@ -149,30 +184,11 @@ export function JobCardFull({ job, onViewDetails, onStatusChange }: Props) {
       {/* Bottom section: score bars + actions */}
       <div style={{ display: 'flex', gap: '20px', padding: '14px 20px', alignItems: 'center' }}>
 
-        {/* Score breakdown bars */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '7px', minWidth: 0 }}>
-          {BREAKDOWN_DIMS.map(({ key, label, color }) => {
-            const val = (bd[key] as number) ?? 0;
-            return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ width: '80px', fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0, fontWeight: 500 }}>
-                  {label}
-                </span>
-                <div style={{ flex: 1, height: '7px', background: 'var(--border-strong)', borderRadius: '99px', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${(val / 5) * 100}%`,
-                    background: color,
-                    borderRadius: '99px',
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-                <span style={{ width: '28px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color, flexShrink: 0 }}>
-                  {val.toFixed(1)}
-                </span>
-              </div>
-            );
-          })}
+        {/* Score breakdown rings */}
+        <div style={{ flex: 1, display: 'flex', gap: '6px', alignItems: 'flex-start', minWidth: 0 }}>
+          {BREAKDOWN_DIMS.map(({ key, label }) => (
+            <MiniRing key={key} val={(bd[key] as number) ?? 0} label={label} />
+          ))}
         </div>
 
         {/* Actions */}

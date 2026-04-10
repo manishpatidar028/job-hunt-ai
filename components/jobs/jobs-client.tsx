@@ -9,7 +9,18 @@ import { JobDetailSheet } from './job-detail-sheet';
 
 type Props = { initialJobs: Job[] };
 
-const STATUS_FILTERS = ['all', 'new', 'reviewing', 'applied'] as const;
+const STATUS_FILTERS = [
+  { value: 'all',        label: 'All'        },
+  { value: 'new',        label: 'New'        },
+  { value: 'reviewing',  label: 'Reviewing'  },
+  { value: 'applied',    label: 'Applied'    },
+  { value: 'interview',  label: 'Interview'  },
+  { value: 'offer',      label: 'Offer'      },
+  { value: 'skipped',    label: 'Skipped'    },
+  { value: 'rejected',   label: 'Rejected'   },
+] as const;
+
+type StatusFilterValue = typeof STATUS_FILTERS[number]['value'];
 const SORT_OPTS = [
   { value: 'score',   label: 'Highest score' },
   { value: 'newest',  label: 'Newest' },
@@ -30,7 +41,7 @@ export function JobsClient({ initialJobs }: Props) {
   const [scoreError, setScoreError] = useState('');
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
   const [minScore, setMinScore] = useState(0);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'score' | 'newest' | 'company'>('score');
@@ -225,76 +236,92 @@ export function JobsClient({ initialJobs }: Props) {
         {/* Filters bar */}
         {jobs.length > 0 && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
             background: 'var(--bg-card)', border: '1px solid var(--border-default)',
             borderRadius: 'var(--radius-xl)', padding: '12px 16px',
-            boxShadow: 'var(--shadow-card)',
+            boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '10px',
           }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
-              {filtered.length} job{filtered.length !== 1 ? 's' : ''}
-            </span>
-
             {/* Status pills */}
-            <div style={{ display: 'flex', gap: '4px' }}>
-              {STATUS_FILTERS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  style={{
-                    padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 500,
-                    cursor: 'pointer', border: '1px solid',
-                    background: statusFilter === s ? 'var(--accent)' : 'transparent',
-                    borderColor: statusFilter === s ? 'var(--accent)' : 'var(--border-default)',
-                    color: statusFilter === s ? '#fff' : 'var(--text-muted)',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {STATUS_FILTERS.map(({ value, label }) => {
+                const count = value === 'all' ? jobs.length : jobs.filter((j) => j.status === value).length;
+                const active = statusFilter === value;
+                if (value !== 'all' && count === 0) return null;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setStatusFilter(value)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 500,
+                      cursor: 'pointer', border: '1px solid',
+                      background: active ? 'var(--accent)' : 'transparent',
+                      borderColor: active ? 'var(--accent)' : 'var(--border-default)',
+                      color: active ? '#fff' : 'var(--text-muted)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {label}
+                    <span style={{
+                      fontSize: '10px', fontWeight: 700,
+                      background: active ? 'rgba(255,255,255,0.25)' : 'var(--bg-muted)',
+                      color: active ? '#fff' : 'var(--text-muted)',
+                      borderRadius: '99px', padding: '0 5px', lineHeight: '16px',
+                    }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Min score */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                Score ≥ {minScore.toFixed(1)}
+            {/* Second row: score + search + sort */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                {filtered.length} shown
               </span>
-              <input
-                type="range" min={0} max={5} step={0.1}
-                value={minScore}
-                onChange={(e) => setMinScore(parseFloat(e.target.value))}
-                style={{ width: '70px', cursor: 'pointer' }}
-              />
-            </div>
 
-            {/* Search */}
-            <div style={{ position: 'relative', flex: 1, minWidth: '140px' }}>
-              <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by company or role…"
+              {/* Min score */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  Score ≥ {minScore.toFixed(1)}
+                </span>
+                <input
+                  type="range" min={0} max={5} step={0.1}
+                  value={minScore}
+                  onChange={(e) => setMinScore(parseFloat(e.target.value))}
+                  style={{ width: '70px', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Search */}
+              <div style={{ position: 'relative', flex: 1, minWidth: '140px' }}>
+                <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by company or role…"
+                  style={{
+                    width: '100%', padding: '5px 8px 5px 24px', fontSize: '12px',
+                    background: 'var(--bg-muted)', border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 style={{
-                  width: '100%', padding: '5px 8px 5px 24px', fontSize: '12px',
+                  padding: '5px 8px', fontSize: '11px',
                   background: 'var(--bg-muted)', border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', outline: 'none',
+                  borderRadius: 'var(--radius-md)', color: 'var(--text-secondary)',
+                  cursor: 'pointer', outline: 'none', flexShrink: 0,
                 }}
-              />
+              >
+                {SORT_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              style={{
-                padding: '5px 8px', fontSize: '11px',
-                background: 'var(--bg-muted)', border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)', color: 'var(--text-secondary)',
-                cursor: 'pointer', outline: 'none', flexShrink: 0,
-              }}
-            >
-              {SORT_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
           </div>
         )}
 

@@ -9,12 +9,113 @@ import { ProceedSheet } from '@/components/proceed/proceed-sheet';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const BREAKDOWN_DIMS = [
-  { key: 'skillMatch',          label: 'Skill Match',        color: '#10B981' },
-  { key: 'seniorityFit',        label: 'Seniority Fit',      color: '#6366F1' },
-  { key: 'domainOverlap',       label: 'Domain Overlap',     color: '#F59E0B' },
-  { key: 'remoteCompatibility', label: 'Remote Compatibility',color: '#0EA5E9' },
-  { key: 'growthPotential',     label: 'Growth Potential',   color: '#A855F7' },
+  { key: 'skillMatch',          label: 'Skills'    },
+  { key: 'seniorityFit',        label: 'Seniority' },
+  { key: 'domainOverlap',       label: 'Domain'    },
+  { key: 'remoteCompatibility', label: 'Remote'    },
+  { key: 'growthPotential',     label: 'Growth'    },
 ] as const;
+
+// ── Radar Chart ───────────────────────────────────────────────────────────────
+
+function RadarChart({ bd }: { bd: Record<string, unknown> }) {
+  const n   = BREAKDOWN_DIMS.length;
+  const cx  = 150, cy = 125, R = 72;
+  const labelR = R + 26;
+
+  // Angles: start at top (−90°), clockwise
+  const angles = BREAKDOWN_DIMS.map((_, i) => (Math.PI * 2 * i) / n - Math.PI / 2);
+
+  function pt(r: number, i: number): [number, number] {
+    return [cx + r * Math.cos(angles[i]), cy + r * Math.sin(angles[i])];
+  }
+
+  function polygon(r: number) {
+    return BREAKDOWN_DIMS.map((_, i) => pt(r, i).join(',')).join(' ');
+  }
+
+  const dataPolygon = BREAKDOWN_DIMS.map(({ key }, i) => {
+    const val = Math.max(0, (bd[key] as number) ?? 0);
+    return pt((val / 5) * R, i).join(',');
+  }).join(' ');
+
+  // text-anchor based on x position relative to center
+  function anchor(i: number) {
+    const x = pt(1, i)[0];
+    if (x > cx + 8) return 'start';
+    if (x < cx - 8) return 'end';
+    return 'middle';
+  }
+
+  const gridLevels = [1, 2, 3, 4, 5];
+
+  return (
+    <svg
+      width="100%" viewBox="0 0 300 240"
+      style={{ display: 'block', maxWidth: '300px', margin: '0 auto' }}
+    >
+      {/* Grid polygons */}
+      {gridLevels.map((lv) => (
+        <polygon
+          key={lv}
+          points={polygon((lv / 5) * R)}
+          fill="none"
+          stroke="#E2E8F0"
+          strokeWidth={lv === 5 ? 1.5 : 1}
+        />
+      ))}
+
+      {/* Axis lines */}
+      {BREAKDOWN_DIMS.map((_, i) => {
+        const [x, y] = pt(R, i);
+        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#E2E8F0" strokeWidth="1" />;
+      })}
+
+      {/* Level label on top axis */}
+      {gridLevels.slice(0, 4).map((lv) => {
+        const [lx, ly] = pt((lv / 5) * R, 0);
+        return (
+          <text key={lv} x={lx + 5} y={ly} fontSize="8" fill="#94A3B8" dominantBaseline="middle">
+            {lv}
+          </text>
+        );
+      })}
+
+      {/* Data area */}
+      <polygon
+        points={dataPolygon}
+        fill="rgba(99,102,241,0.10)"
+        stroke="#6366F1"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+
+      {/* Data points */}
+      {BREAKDOWN_DIMS.map(({ key }, i) => {
+        const val = Math.max(0, (bd[key] as number) ?? 0);
+        const [px, py] = pt((val / 5) * R, i);
+        return <circle key={i} cx={px} cy={py} r="3.5" fill="#6366F1" stroke="#fff" strokeWidth="1.5" />;
+      })}
+
+      {/* Labels */}
+      {BREAKDOWN_DIMS.map(({ key, label }, i) => {
+        const [lx, ly] = pt(labelR, i);
+        const val = (bd[key] as number) ?? 0;
+        const ta  = anchor(i);
+        return (
+          <g key={i}>
+            <text x={lx} y={ly - 6} textAnchor={ta} fontSize="10" fontWeight="600" fill="#475569" fontFamily="var(--font)">
+              {label}
+            </text>
+            <text x={lx} y={ly + 7} textAnchor={ta} fontSize="9.5" fill="#94A3B8" fontFamily="var(--font)">
+              {val > 0 ? `${val.toFixed(1)}/5` : '—'}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
 const REC_STYLES: Record<string, { bg: string; color: string; border: string; label: string; desc: string }> = {
   strong_apply: { bg: '#F0FDF4', color: '#065F46', border: '#6EE7B7', label: '⚡ Strong Apply', desc: 'Excellent match — apply confidently' },
@@ -126,8 +227,8 @@ export function JobDetailSheet({ job, open, onClose, onStatusChange, onDelete }:
 
   const bd     = (job.score_breakdown ?? {}) as Record<string, unknown>;
   const score  = job.ai_score ?? job.rule_score ?? 0;
-  const rec    = (bd.recommendation as string) ?? 'consider';
-  const recSt  = REC_STYLES[rec] ?? REC_STYLES.consider;
+  const rec    = score > 0 ? ((bd.recommendation as string) ?? 'consider') : null;
+  const recSt  = rec ? (REC_STYLES[rec] ?? REC_STYLES.consider) : null;
   const salary = formatSalary(job.salary_min, job.salary_max, job.currency);
   const color  = scoreColor(score);
   const bg     = scoreBg(score);
@@ -213,15 +314,23 @@ export function JobDetailSheet({ job, open, onClose, onStatusChange, onDelete }:
                 <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', fontWeight: 600 }}>
                   AI Match Score
                 </div>
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px', borderRadius: '99px',
-                  background: recSt.bg, border: `1px solid ${recSt.border}`,
-                  marginBottom: '6px',
-                }}>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: recSt.color }}>{recSt.label}</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{recSt.desc}</div>
+                {recSt ? (
+                  <>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 14px', borderRadius: '99px',
+                      background: recSt.bg, border: `1px solid ${recSt.border}`,
+                      marginBottom: '6px',
+                    }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: recSt.color }}>{recSt.label}</span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{recSt.desc}</div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    Not evaluated yet
+                  </div>
+                )}
               </div>
 
               {/* Status selector */}
@@ -246,28 +355,9 @@ export function JobDetailSheet({ job, open, onClose, onStatusChange, onDelete }:
               </div>
             </div>
 
-            {/* Breakdown bars */}
-            <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {BREAKDOWN_DIMS.map(({ key, label, color: dimColor }) => {
-                const val = (bd[key] as number) ?? 0;
-                return (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ width: '140px', fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0, fontWeight: 500 }}>
-                      {label}
-                    </span>
-                    <div style={{ flex: 1, height: '8px', background: '#E2E8F0', borderRadius: '99px', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', width: `${(val / 5) * 100}%`,
-                        background: dimColor, borderRadius: '99px',
-                        transition: 'width 0.6s ease',
-                      }} />
-                    </div>
-                    <span style={{ width: '32px', textAlign: 'right', fontSize: '12px', fontWeight: 700, color: dimColor, flexShrink: 0 }}>
-                      {val.toFixed(1)}
-                    </span>
-                  </div>
-                );
-              })}
+            {/* Radar chart */}
+            <div style={{ padding: '0 24px 20px' }}>
+              <RadarChart bd={bd} />
             </div>
 
             {/* Reasoning */}
