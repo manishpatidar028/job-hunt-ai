@@ -12,7 +12,7 @@ const DAILY_LIMITS: Record<AiAction, number> = {
   job_score:          20,
   cv_upload:           3,
   discover_evaluate:  15,
-  resume_tailor:       5,
+  resume_tailor:       10,
   cover_letter:        5,
   interview_prep:     10,
 };
