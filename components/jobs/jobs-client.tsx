@@ -111,7 +111,7 @@ export function JobsClient({ initialJobs }: Props) {
 
   return (
     <>
-      <div style={{ maxWidth: '820px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
         {/* Ingestion panel */}
         <div style={{
@@ -156,63 +156,68 @@ export function JobsClient({ initialJobs }: Props) {
                 ))}
               </div>
 
-              {jdTab === 'paste' ? (
-                <textarea
-                  value={jdText}
-                  onChange={(e) => setJdText(e.target.value)}
-                  placeholder="Paste the full job description here..."
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  {jdTab === 'paste' ? (
+                    <textarea
+                      value={jdText}
+                      onChange={(e) => setJdText(e.target.value)}
+                      placeholder="Paste the full job description here..."
+                      style={{
+                        width: '100%', height: '140px', padding: '10px 12px', fontSize: '13px',
+                        background: 'var(--bg-input)', border: '1px solid var(--border-input)',
+                        borderRadius: 'var(--radius-md)', color: 'var(--text-primary)',
+                        resize: 'vertical', outline: 'none', fontFamily: 'var(--font)', lineHeight: 1.6,
+                      }}
+                    />
+                  ) : (
+                    <div>
+                      <input
+                        value={jdUrl}
+                        onChange={(e) => setJdUrl(e.target.value)}
+                        placeholder="https://..."
+                        type="url"
+                        style={{
+                          width: '100%', padding: '9px 12px', fontSize: '13px',
+                          background: 'var(--bg-input)', border: '1px solid var(--border-input)',
+                          borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', outline: 'none',
+                        }}
+                      />
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
+                        We'll fetch and parse the job page automatically.
+                      </p>
+                    </div>
+                  )}
+
+                  {scoreError && (
+                    <div style={{
+                      marginTop: '10px', padding: '8px 12px', fontSize: '12px',
+                      background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
+                      borderRadius: 'var(--radius-md)', color: 'var(--danger)',
+                    }}>
+                      {scoreError}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleEvaluate}
+                  disabled={scoring || !(jdTab === 'paste' ? jdText.trim() : jdUrl.trim())}
                   style={{
-                    width: '100%', height: '140px', padding: '10px 12px', fontSize: '13px',
-                    background: 'var(--bg-input)', border: '1px solid var(--border-input)',
-                    borderRadius: 'var(--radius-md)', color: 'var(--text-primary)',
-                    resize: 'vertical', outline: 'none', fontFamily: 'var(--font)', lineHeight: 1.6,
-                    marginBottom: '10px',
+                    padding: '10px 24px', borderRadius: 'var(--radius-md)', flexShrink: 0,
+                    background: scoring ? 'var(--text-muted)' : 'var(--accent)',
+                    border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600,
+                    cursor: scoring ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    transition: 'background 0.15s ease', alignSelf: 'flex-start',
+                    marginTop: jdTab === 'url' ? '0' : '0',
+                    height: '40px',
                   }}
-                />
-              ) : (
-                <div style={{ marginBottom: '10px' }}>
-                  <input
-                    value={jdUrl}
-                    onChange={(e) => setJdUrl(e.target.value)}
-                    placeholder="https://..."
-                    type="url"
-                    style={{
-                      width: '100%', padding: '9px 12px', fontSize: '13px',
-                      background: 'var(--bg-input)', border: '1px solid var(--border-input)',
-                      borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', outline: 'none',
-                    }}
-                  />
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
-                    We'll fetch and parse the job page automatically.
-                  </p>
-                </div>
-              )}
-
-              {scoreError && (
-                <div style={{
-                  marginBottom: '10px', padding: '8px 12px', fontSize: '12px',
-                  background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
-                  borderRadius: 'var(--radius-md)', color: 'var(--danger)',
-                }}>
-                  {scoreError}
-                </div>
-              )}
-
-              <button
-                onClick={handleEvaluate}
-                disabled={scoring || !(jdTab === 'paste' ? jdText.trim() : jdUrl.trim())}
-                style={{
-                  width: '100%', padding: '10px', borderRadius: 'var(--radius-md)',
-                  background: scoring ? 'var(--text-muted)' : 'var(--accent)',
-                  border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600,
-                  cursor: scoring ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  transition: 'background 0.15s ease',
-                }}
-              >
-                {scoring && <Loader2 size={14} className="animate-spin" />}
-                {scoring ? 'Scoring with AI…' : 'Evaluate job'}
-              </button>
+                >
+                  {scoring && <Loader2 size={14} className="animate-spin" />}
+                  {scoring ? 'Scoring…' : 'Evaluate'}
+                </button>
+              </div>
             </div>
           )}
         </div>

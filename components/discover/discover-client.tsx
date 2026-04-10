@@ -8,7 +8,8 @@ import type { DiscoveredJob } from '@/app/api/discover/search/route';
 import type { EvaluateResult } from '@/app/api/discover/evaluate/route';
 
 type Props = {
-  initialQuery: string;
+  initialSkills: string[];
+  allUserSkills: string[];
   hasAdzuna: boolean;
   watchedCompanies: string[];
   jobMarket: string;
@@ -38,8 +39,9 @@ const LEVEL_COLORS: Record<string, { bg: string; text: string }> = {
   learning: { bg: '#F8FAFC', text: '#64748B' },
 };
 
-export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobMarket, userYearsExperience }: Props) {
-  const [query, setQuery] = useState(initialQuery);
+export function DiscoverClient({ initialSkills, allUserSkills, hasAdzuna, watchedCompanies, jobMarket, userYearsExperience }: Props) {
+  const [skills, setSkills] = useState<string[]>(initialSkills);
+  const [skillInput, setSkillInput] = useState('');
   const [locations, setLocations] = useState<string[]>([]);
   const [locationInput, setLocationInput] = useState('');
   const [country, setCountry] = useState(jobMarket);
@@ -57,6 +59,24 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
   const [evalResults, setEvalResults] = useState<EvaluateResult[]>([]);
   const [evalError, setEvalError] = useState('');
   const [panelJob, setPanelJob] = useState<DiscoveredJob | null>(null);
+
+  const addSkill = (val: string) => {
+    const trimmed = val.trim();
+    if (trimmed && !skills.map((s) => s.toLowerCase()).includes(trimmed.toLowerCase())) {
+      setSkills((prev) => [...prev, trimmed]);
+    }
+    setSkillInput('');
+  };
+
+  const removeSkill = (skill: string) => setSkills((prev) => prev.filter((s) => s !== skill));
+
+  const toggleSuggestedSkill = (skill: string) => {
+    if (skills.map((s) => s.toLowerCase()).includes(skill.toLowerCase())) {
+      removeSkill(skill);
+    } else {
+      setSkills((prev) => [...prev, skill]);
+    }
+  };
 
   const addLocation = (val: string) => {
     const trimmed = val.trim();
@@ -80,7 +100,7 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query, locations, country, companies,
+          query: skills.join(' '), locations, country, companies,
           ...(daysBack ? { daysBack } : {}),
           ...(minYears ? { minYears: parseInt(minYears) } : {}),
           ...(maxYears ? { maxYears: parseInt(maxYears) } : {}),
@@ -96,7 +116,7 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
     } finally {
       setSearching(false);
     }
-  }, [query, locations, country, companiesText, daysBack, minYears, maxYears]);
+  }, [skills, locations, country, companiesText, daysBack, minYears, maxYears]);
 
   const toggleJob = (id: string) => {
     setSelected((prev) => {
@@ -139,7 +159,7 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
 
   const okCount = evalResults.filter((r) => r.status === 'ok').length;
   const errCount = evalResults.filter((r) => r.status === 'error').length;
-  const canSearch = query.trim().length > 0;
+  const canSearch = skills.length > 0;
 
   return (
     <>
@@ -153,11 +173,11 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={labelStyle}>Keywords / Role</span>
+              <span style={labelStyle}>Skills</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {query !== initialQuery && initialQuery && (
-                  <button onClick={() => setQuery(initialQuery)} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--accent)', padding: 0 }}>
-                    <RotateCcw size={10} /> Reset to skills
+                {JSON.stringify(skills) !== JSON.stringify(initialSkills) && (
+                  <button onClick={() => setSkills(initialSkills)} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--accent)', padding: 0 }}>
+                    <RotateCcw size={10} /> Reset to profile
                   </button>
                 )}
                 <Link href="/skills" style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
@@ -165,7 +185,47 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
                 </Link>
               </div>
             </div>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="e.g. React TypeScript Node.js" style={inputStyle} />
+            {/* Tag input */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: '#fff', minHeight: '38px', alignItems: 'center' }}>
+              {skills.map((skill) => (
+                <span key={skill} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '100px', background: 'var(--accent-subtle)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--accent-border)' }}>
+                  {skill}
+                  <button onClick={() => removeSkill(skill)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--accent)', lineHeight: 1 }}>
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={skillInput}
+                onChange={(e) => setSkillInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSkill(skillInput); }
+                  if (e.key === 'Backspace' && !skillInput && skills.length > 0) removeSkill(skills[skills.length - 1]);
+                }}
+                onBlur={() => { if (skillInput.trim()) addSkill(skillInput); }}
+                placeholder={skills.length === 0 ? 'React, TypeScript, Node.js…' : 'Add more…'}
+                style={{ border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', background: 'transparent', minWidth: '120px', flex: 1, padding: 0 }}
+              />
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Press Enter or comma to add · Backspace to remove last</span>
+            {/* Suggestions from profile */}
+            {allUserSkills.filter((s) => !skills.map((x) => x.toLowerCase()).includes(s.toLowerCase())).length > 0 && (
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>From profile:</span>
+                {allUserSkills
+                  .filter((s) => !skills.map((x) => x.toLowerCase()).includes(s.toLowerCase()))
+                  .slice(0, 12)
+                  .map((s) => (
+                    <button key={s} onClick={() => toggleSuggestedSkill(s)} style={{
+                      padding: '2px 9px', borderRadius: '100px', fontSize: '11px', cursor: 'pointer',
+                      border: '1px solid var(--border-default)', background: '#F8FAFC',
+                      color: 'var(--text-secondary)', fontWeight: 400,
+                    }}>
+                      + {s}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -289,8 +349,8 @@ export function DiscoverClient({ initialQuery, hasAdzuna, watchedCompanies, jobM
             }}>
               {searching ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> Scanning…</> : <><Search size={14} /> Search Jobs</>}
             </button>
-            {!canSearch && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enter keywords or <Link href="/skills" style={{ color: 'var(--accent)' }}>add skills</Link> to your profile</span>}
-            {canSearch && !searching && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>RemoteOK · Remotive · Greenhouse · Lever{hasAdzuna ? ' · Adzuna' : ''}</span>}
+            {!canSearch && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Add at least one skill or <Link href="/skills" style={{ color: 'var(--accent)' }}>set up your profile</Link></span>}
+            {canSearch && !searching && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>RemoteOK · Remotive · Greenhouse · Lever · AI Web Search{hasAdzuna ? ' · Adzuna' : ''}</span>}
           </div>
 
           {searchError && <p style={{ fontSize: '13px', color: '#EF4444', margin: 0 }}>{searchError}</p>}
@@ -387,6 +447,8 @@ function DiscoverJobRow({ job, checked, active, onToggle, onOpen }: {
   const sourceLabels: Record<string, string> = {
     adzuna: 'Adzuna', greenhouse: 'Greenhouse', lever: 'Lever',
     remoteok: 'RemoteOK', remotive: 'Remotive',
+    ashby: 'Ashby', workable: 'Workable', smartrecruiters: 'SmartRecruiters',
+    bamboohr: 'BambooHR', recruitee: 'Recruitee', ai_web_search: 'AI Search',
   };
   const cleanJd = job.jdText ? stripHtml(job.jdText) : '';
   const isHighlit = active || hovered;
@@ -467,6 +529,8 @@ function JobDetailPanel({ job, onClose }: { job: DiscoveredJob; onClose: () => v
   const sourceLabels: Record<string, string> = {
     adzuna: 'Adzuna', greenhouse: 'Greenhouse', lever: 'Lever',
     remoteok: 'RemoteOK', remotive: 'Remotive',
+    ashby: 'Ashby', workable: 'Workable', smartrecruiters: 'SmartRecruiters',
+    bamboohr: 'BambooHR', recruitee: 'Recruitee', ai_web_search: 'AI Search',
   };
 
   return (

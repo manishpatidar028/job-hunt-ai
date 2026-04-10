@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { buildSearchQuery } from '@/lib/discover/build-query';
 import { DiscoverClient } from '@/components/discover/discover-client';
 import type { Skill } from '@/lib/actions/skills';
 
@@ -17,7 +16,19 @@ export default async function DiscoverPage() {
   ]);
 
   const skills = (skillsData ?? []) as Skill[];
-  const initialQuery = buildSearchQuery(skills);
+
+  const LEVEL_WEIGHT: Record<string, number> = { expert: 4, strong: 3, familiar: 2, learning: 1 };
+  const activeSkills = skills.filter((s) => !s.is_hidden);
+  const initialSkills = [...activeSkills]
+    .sort((a, b) => {
+      const aScore = (a.is_primary ? 10 : 0) + (LEVEL_WEIGHT[a.level] ?? 0);
+      const bScore = (b.is_primary ? 10 : 0) + (LEVEL_WEIGHT[b.level] ?? 0);
+      return bScore - aScore;
+    })
+    .slice(0, 6)
+    .map((s) => s.name);
+  const allUserSkills = activeSkills.map((s) => s.name);
+
   const hasAdzuna = !!(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY);
   const prefs = (profile?.preferences ?? {}) as Record<string, unknown>;
   const watchedCompanies = (prefs.watchedCompanies as string[]) ?? [];
@@ -35,7 +46,8 @@ export default async function DiscoverPage() {
         </p>
       </div>
       <DiscoverClient
-        initialQuery={initialQuery}
+        initialSkills={initialSkills}
+        allUserSkills={allUserSkills}
         hasAdzuna={hasAdzuna}
         watchedCompanies={watchedCompanies}
         jobMarket={jobMarket}

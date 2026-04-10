@@ -14,12 +14,13 @@ import {
   isRemoteFilter, locationMatchesFilter,
   type RawJob,
 } from '@/lib/discover/fetchers';
+import { fetchAIWebSearch } from '@/lib/discover/ai-web-search';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export type DiscoveredJob = RawJob & {
-  source: 'adzuna' | 'greenhouse' | 'lever' | 'remoteok' | 'remotive' | 'ashby' | 'workable' | 'smartrecruiters' | 'bamboohr' | 'recruitee';
+  source: 'adzuna' | 'greenhouse' | 'lever' | 'remoteok' | 'remotive' | 'ashby' | 'workable' | 'smartrecruiters' | 'bamboohr' | 'recruitee' | 'ai_web_search';
   ruleScore: number;
   matchedSkills: { name: string; level: string; isPrimary: boolean }[];
   missingPrimary: string[];
@@ -52,10 +53,7 @@ export async function POST(request: NextRequest) {
   const tokens = queryTokens(query);
   const fetches: Promise<RawJob[]>[] = [];
 
-  // RemoteOK and Remotive are remote-only boards — include only when no location filter
-  // or when "remote" is explicitly one of the selected locations
-  const wantsRemote = locations.length === 0 || locations.some((l) => isRemoteFilter(l));
-  // City locations (non-remote) for Adzuna — one call per city
+  const wantsRemote   = locations.length === 0 || locations.some((l) => isRemoteFilter(l));
   const cityLocations = locations.filter((l) => !isRemoteFilter(l));
 
   if (query.trim()) {
@@ -98,6 +96,42 @@ export async function POST(request: NextRequest) {
   }
   for (const company of DEFAULT_RECRUITEE) {
     fetches.push(fetchRecruitee(company, tokens, daysBack, locations));
+  }
+
+  // AI web search — Tavily + Jina Reader + Groq extraction
+  // Hard-capped at 18 s so it never blows the route's 30 s maxDuration.
+  // Silently returns [] if TAVILY_API_KEY is missing or the cap is hit.
+  if (process.env.TAVILY_API_KEY) {
+    const activeSkillNames = skills
+      .filter((s) => !s.is_hidden)
+      .sort((a, b) => {
+        const w = { expert: 4, strong: 3, familiar: 2, learning: 1 };
+        return (b.is_primary ? 10 : 0) + (w[b.level as keyof typeof w] ?? 0)
+             - (a.is_primary ? 10 : 0) - (w[a.level as keyof typeof w] ?? 0);
+      })
+      .map((s) => s.name);
+
+    const primarySkillNames = skills
+      .filter((s) => s.is_primary && !s.is_hidden)
+      .map((s) => s.name);
+
+    const aiSearchTimeout = new Promise<RawJob[]>((resolve) =>
+      setTimeout(() => resolve([]), 18_000),
+    );
+
+    fetches.push(
+      Promise.race([
+        fetchAIWebSearch({
+          skills:        activeSkillNames,
+          primarySkills: primarySkillNames,
+          locations,
+          minYears,
+          maxYears,
+          daysBack,
+        }),
+        aiSearchTimeout,
+      ]),
+    );
   }
 
   if (fetches.length === 0) return NextResponse.json({ jobs: [] });

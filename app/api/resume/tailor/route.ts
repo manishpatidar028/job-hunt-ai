@@ -55,7 +55,7 @@ OUTPUT: The complete tailored resume as plain text.`;
       system: 'You are an expert resume writer. Output only the tailored resume text, nothing else.',
       prompt,
     });
-    return NextResponse.json({ tailoredResume: text.trim() });
+    return NextResponse.json({ tailoredResume: text.trim(), originalCv: cvText });
   } catch (err) {
     console.error('[resume/tailor] error:', err);
     return NextResponse.json({ error: 'Failed to generate tailored resume' }, { status: 500 });
