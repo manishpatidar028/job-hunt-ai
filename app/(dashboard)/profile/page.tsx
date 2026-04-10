@@ -243,7 +243,7 @@ export default function ProfilePage() {
 
   // Load existing profile data on mount
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }: { data: { user: { id: string; email?: string; user_metadata?: Record<string, string> } | null } }) => {
       if (!user) return;
       const { data } = await supabase
         .from("profiles")

@@ -99,7 +99,7 @@ export function Sidebar() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string; email?: string; user_metadata?: Record<string, string> } | null } }) => {
       if (!user) return;
       setUserEmail(user.email ?? "—");
       // Try profile full_name first
@@ -108,7 +108,7 @@ export function Sidebar() {
         .select("full_name")
         .eq("id", user.id)
         .single()
-        .then(({ data }) => {
+        .then(({ data }: { data: { full_name?: string } | null }) => {
           setUserName(
             data?.full_name ||
             user.user_metadata?.full_name ||

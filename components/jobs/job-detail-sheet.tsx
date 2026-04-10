@@ -271,7 +271,7 @@ export function JobDetailSheet({ job, open, onClose, onStatusChange, onDelete }:
             </div>
 
             {/* Reasoning */}
-            {bd.reasoning && (
+            {!!bd.reasoning && (
               <div style={{
                 margin: '0 24px 20px',
                 padding: '12px 14px',
@@ -281,7 +281,7 @@ export function JobDetailSheet({ job, open, onClose, onStatusChange, onDelete }:
                 fontSize: '12px', color: 'var(--text-secondary)',
                 lineHeight: 1.65, fontStyle: 'italic',
               }}>
-                {bd.reasoning as string}
+                {String(bd.reasoning)}
               </div>
             )}
           </div>

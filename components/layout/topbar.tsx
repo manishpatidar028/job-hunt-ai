@@ -22,7 +22,7 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }: { data: { user: { email?: string; user_metadata?: Record<string, string> } | null } }) => {
       const meta = data.user?.user_metadata;
       setUserEmail(data.user?.email ?? "");
       setUserName(
